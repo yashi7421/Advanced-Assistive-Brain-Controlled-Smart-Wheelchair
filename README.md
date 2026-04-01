@@ -16,6 +16,10 @@ The goal is simple:
 </p>
 
 <p align="center">
+  <img src=images/Wheelchair_Prototype.jpg width="900"/>
+</p>
+
+<p align="center">
   <img src=images/Mind_Map.png width="900"/>
 </p>
 
