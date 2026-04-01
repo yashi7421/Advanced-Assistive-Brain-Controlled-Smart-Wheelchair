@@ -16,7 +16,7 @@ The goal is simple:
 </p>
 
 <p align="center">
-  <img src=images/Block Diagram.png width="500"/>
+  <img src=images/Block Diagram.png width="900"/>
 </p>
 
 <p align="center">
