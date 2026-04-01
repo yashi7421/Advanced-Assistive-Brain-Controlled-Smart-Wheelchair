@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Eye Tracking Showing All Movements</title>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+    }
+
+    .video-wrapper {
+      position: relative;
+      width: 640px;
+      height: 480px;
+      margin-bottom: 20px;
+    }
+
+    video, canvas {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 10px;
+    }
+
+    .status-panel {
+      display: flex;
+      gap: 20px;
+      font-size: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 700px;
+    }
+
+    .status-box {
+      background-color: #222;
+      padding: 15px 25px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+      min-width: 180px;
+      text-align: center;
+    }
+
+    .green { color: #00ff00; }
+    .yellow { color: #ffff00; }
+    .red { color: #ff4444; }
+  </style>
+</head>
+<body>
+
+  <h1>👁️ Eye Tracking Showing All Detected Movements</h1>
+  
+  <div class="video-wrapper">
+    <video id="video" autoplay muted playsinline></video>
+    <canvas id="overlay"></canvas>
+  </div>
+
+  <div class="status-panel">
+    <div class="status-box">
+      Horizontal Gaze: <span id="horizontalGaze" class="yellow">Detecting...</span>
+    </div>
+    <div class="status-box">
+      Vertical Gaze: <span id="verticalGaze" class="yellow">Detecting...</span>
+    </div>
+    <div class="status-box">
+      Motor Actions: <span id="motorActions" class="yellow">Waiting...</span>
+    </div>
+  </div>
+
+  <script>
+    const videoElement = document.getElementById('video');
+    const canvasElement = document.getElementById('overlay');
+    const canvasCtx = canvasElement.getContext('2d');
+
+    const horizontalGazeText = document.getElementById('horizontalGaze');
+    const verticalGazeText = document.getElementById('verticalGaze');
+    const motorActionsText = document.getElementById('motorActions');
+
+    canvasElement.width = 640;
+    canvasElement.height = 480;
+
+    const faceMesh = new FaceMesh({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
+    });
+
+    faceMesh.setOptions({
+      maxNumFaces: 1,
+      refineLandmarks: true,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+
+    faceMesh.onResults(results => {
+      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+      canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+      if (results.multiFaceLandmarks.length > 0) {
+        const landmarks = results.multiFaceLandmarks[0];
+
+        const leftIris = landmarks[468];  
+        const rightIris = landmarks[473]; 
+        const nose = landmarks[1];        
+
+        const canvasWidth = canvasElement.width;
+        const canvasHeight = canvasElement.height;
+
+        const leftX = leftIris.x * canvasWidth;
+        const rightX = rightIris.x * canvasWidth;
+        const noseX = nose.x * canvasWidth;
+
+        const leftY = leftIris.y * canvasHeight;
+        const rightY = rightIris.y * canvasHeight;
+        const noseY = nose.y * canvasHeight;
+
+        const eyeAvgX = (leftX + rightX) / 2;
+        const eyeAvgY = (leftY + rightY) / 2;
+
+        const deltaX = eyeAvgX - noseX;  
+        const deltaY = eyeAvgY - noseY;  
+
+        // Draw boxes on eyes
+        [[leftX, leftY], [rightX, rightY]].forEach(([x, y]) => {
+          canvasCtx.beginPath();
+          canvasCtx.rect(x - 8, y - 8, 16, 16);
+          canvasCtx.strokeStyle = '#00ff00';
+          canvasCtx.lineWidth = 2;
+          canvasCtx.stroke();
+        });
+
+        const horizontalThreshold = 12;
+        const verticalThreshold = 10;
+
+        // Horizontal gaze detection
+        let horizontalGaze = "Center";
+        let horizontalClass = "yellow";
+        if (deltaX < -horizontalThreshold) {
+          horizontalGaze = "Looking Left";
+          horizontalClass = "green";
+        } else if (deltaX > horizontalThreshold) {
+          horizontalGaze = "Looking Right";
+          horizontalClass = "red";
+        }
+
+        // Vertical gaze detection
+        let verticalGaze = "Center";
+        let verticalClass = "yellow";
+        if (deltaY < -verticalThreshold) {
+          verticalGaze = "Looking Forward (Up)";
+          verticalClass = "green";
+        } else if (deltaY > verticalThreshold) {
+          verticalGaze = "Looking Backward (Down)";
+          verticalClass = "red";
+        }
+
+        // Determine motor actions based on all active directions
+        const motorActions = [];
+        if (horizontalGaze === "Looking Left") motorActions.push("Left Motor Activated");
+        if (horizontalGaze === "Looking Right") motorActions.push("Right Motor Activated");
+        if (verticalGaze === "Looking Forward (Up)") motorActions.push("Forward Motor Activated");
+        if (verticalGaze === "Looking Backward (Down)") motorActions.push("Backward Motor Activated");
+        if (motorActions.length === 0) motorActions.push("Motors Stopped");
+
+        // Update the UI
+        horizontalGazeText.innerText = horizontalGaze;
+        horizontalGazeText.className = horizontalClass;
+
+        verticalGazeText.innerText = verticalGaze;
+        verticalGazeText.className = verticalClass;
+
+        motorActionsText.innerText = motorActions.join(", ");
+        motorActionsText.className = motorActions.includes("Stopped") ? "yellow" : "green";
+      }
+    });
+
+    const camera = new Camera(videoElement, {
+      onFrame: async () => {
+        await faceMesh.send({ image: videoElement });
+      },
+      width: 640,
+      height: 480
+    });
+
+    camera.start();
+  </script>
+
+</body>
+</html>
