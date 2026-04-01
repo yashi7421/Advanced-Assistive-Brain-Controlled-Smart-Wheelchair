@@ -12,7 +12,15 @@ The goal is simple:
 **📸 Project Image:**
 
 <p align="center">
-  <img src="images/" alt="" width="900"/>
+  <img src=images/Circuit_Diagram.png alt="Circuit_Diagram" width="900"/>
+</p>
+
+<p align="center">
+  <img src=images/Block Diagram.png alt="Block Diagram" width="900"/>
+</p>
+
+<p align="center">
+  <img src=images/Mind_Map.png alt="Mind_Map" width="900"/>
 </p>
 
 | Feature Category | Description | Details |
